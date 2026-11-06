@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets
+.env
+.env.*
+
+# App data (your saved words)
+words.json
+words.json.tmp
+*.tmp
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp

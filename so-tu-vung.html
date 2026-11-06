@@ -1,0 +1,283 @@
+<title>Sổ từ vựng</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Literata:opsz,wght@7..72,600&family=Noto+Sans:wght@400&display=swap">
+<style>
+  /* Layout: a notebook page — header, one add bar, then a wide ledger table that scrolls sideways inside its own frame */
+  :root {
+    --bg: #f3f6f9; --surface: #ffffff; --ink: #18222f; --muted: #5a6879; --line: #dbe2ea;
+    --accent: #1d5bb8; --accent-ink: #ffffff; --mark: #fff0a3; --danger: #b3261e; --soft: #eaf0f8;
+    --font-display: "Literata", Georgia, serif;
+    --font-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-ipa: "Noto Sans", "Doulos SIL", "Lucida Sans Unicode", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11161d; --surface: #19202a; --ink: #e5eaf1; --muted: #95a2b4; --line: #2a3441;
+      --accent: #78a6ff; --accent-ink: #0d1520; --mark: #5a4810; --danger: #ff8a80; --soft: #1f2a38;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11161d; --surface: #19202a; --ink: #e5eaf1; --muted: #95a2b4; --line: #2a3441;
+    --accent: #78a6ff; --accent-ink: #0d1520; --mark: #5a4810; --danger: #ff8a80; --soft: #1f2a38;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font-body);
+    padding-block: 28px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .page { max-width: 1500px; margin: 0 auto; display: grid; gap: 16px; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { margin: 0; font: 600 28px/1.15 var(--font-display); letter-spacing: -0.01em; text-wrap: balance; }
+  .count { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+  form { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+  input {
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--surface); color: var(--ink); font: inherit; min-width: 0;
+  }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #word { flex: 0 1 200px; }
+  #sentence { flex: 1 1 320px; }
+  .btn {
+    padding: 10px 18px; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-ink);
+    font: 500 15px var(--font-body); cursor: pointer;
+  }
+  .btn:disabled { opacity: .6; cursor: progress; }
+  .status { min-height: 21px; font-size: 14px; color: var(--muted); }
+  .status.error { color: var(--danger); }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+  #search { padding: 7px 10px; width: min(260px, 100%); }
+
+  .frame { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1500px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 9px 11px; text-align: left; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  th {
+    font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); white-space: nowrap; background: var(--surface);
+  }
+  /* keep the word visible while scrolling sideways */
+  th:first-child, td.word { position: sticky; left: 0; background: var(--surface); z-index: 1; box-shadow: 1px 0 0 var(--line); }
+  td[contenteditable] { outline: none; white-space: pre-wrap; border-radius: 4px; }
+  td[contenteditable]:hover { background: var(--soft); }
+  td[contenteditable]:focus { box-shadow: inset 0 0 0 2px var(--accent); background: var(--surface); }
+  td.word { font-weight: 600; min-width: 120px; }
+  td.word:focus { box-shadow: inset 0 0 0 2px var(--accent); }
+  td.phonetic { font-family: var(--font-ipa); color: var(--muted); white-space: nowrap; }
+  td.pos { white-space: nowrap; color: var(--muted); font-size: 14px; }
+  td.meaning_vi { font-weight: 500; min-width: 170px; }
+  td.meaning_en, td.sentence, td.example { min-width: 230px; }
+  td.collocations { min-width: 210px; }
+  td.synonyms { min-width: 150px; }
+  td.notes { min-width: 150px; }
+  mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2px; }
+  .del {
+    background: none; border: 0; color: var(--muted); padding: 2px 8px; border-radius: 6px;
+    font: 500 13px var(--font-body); cursor: pointer; white-space: nowrap;
+  }
+  .del:hover { color: var(--danger); }
+  .del.armed { color: var(--accent-ink); background: var(--danger); }
+  .empty { padding: 36px 16px; text-align: center; color: var(--muted); }
+  .empty[hidden] { display: none; }
+  @media (prefers-reduced-motion: no-preference) { .btn, .del, td[contenteditable] { transition: background-color .15s, color .15s; } }
+</style>
+
+<div class="page">
+  <header>
+    <h1>Sổ từ vựng</h1>
+    <span class="count" id="count"></span>
+  </header>
+
+  <form id="add">
+    <input id="word" placeholder="Từ mới" required autocomplete="off" aria-label="Từ mới">
+    <input id="sentence" placeholder="Câu có chứa từ đó" autocomplete="off" aria-label="Câu có chứa từ">
+    <button class="btn" id="addBtn">Thêm</button>
+  </form>
+  <div class="status" id="status" role="status"></div>
+
+  <div class="toolbar">
+    <span>Bấm vào ô bất kỳ để sửa. Nhấn Enter để lưu, Shift+Enter để xuống dòng.</span>
+    <input id="search" placeholder="Tìm kiếm…" aria-label="Tìm kiếm">
+  </div>
+
+  <div class="frame">
+    <table>
+      <thead><tr>
+        <th>Từ</th><th>Phiên âm (Mỹ)</th><th>Từ loại</th><th>Nghĩa tiếng Việt</th><th>Nghĩa tiếng Anh</th>
+        <th>Câu của bạn</th><th>Cụm từ thường gặp</th><th>Từ đồng nghĩa</th><th>Ví dụ khác</th><th>Ghi chú</th><th></th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty">Đang tải sổ từ vựng…</div>
+  </div>
+</div>
+
+<script>
+const COLS = ["word", "phonetic", "pos", "meaning_vi", "meaning_en", "sentence",
+              "collocations", "synonyms", "example", "notes"];
+const AUTO = ["phonetic", "pos", "meaning_vi", "meaning_en", "collocations", "synonyms", "example"];
+const $ = id => document.getElementById(id);
+let words = [], db = null, sample = null, loaded = false, renderPending = false;
+
+const ERRORS = {
+  not_granted: "Bạn chưa cho phép trang này dùng Claude. Hãy tải lại trang và chọn Cho phép.",
+  sampling_disabled: "Tài khoản của bạn hiện không dùng được Claude.",
+  rate_limited: "Bạn đã tra quá nhiều trong thời gian ngắn. Hãy thử lại sau ít phút.",
+  session_expired: "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại claude.ai.",
+  refused: "Claude không tra được từ này. Hãy thử một câu khác.",
+  invalid_json: "Kết quả bị lỗi định dạng. Hãy bấm Thêm để thử lại.",
+};
+const errorText = e => ERRORS[e?.code] || "Không tra được từ do lỗi kết nối. Hãy thử lại.";
+
+function setStatus(text, isError = false) {
+  $("status").textContent = text;
+  $("status").classList.toggle("error", isError);
+}
+
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+function highlight(word, text) {
+  if (!word) return esc(text);
+  const re = new RegExp("\\b(" + word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\w*)", "gi");
+  return esc(text).replace(re, "<mark>$1</mark>");
+}
+
+// ---------- table ----------
+function isEditing() { return document.activeElement?.matches?.("td[contenteditable]"); }
+
+function render() {
+  if (isEditing()) { renderPending = true; return; }   // don't wipe a cell you are typing in
+  renderPending = false;
+  const q = $("search").value.trim().toLowerCase();
+  const shown = words.filter(w => !q || COLS.some(c => String(w[c] || "").toLowerCase().includes(q)));
+  const tbody = $("rows");
+  tbody.replaceChildren();
+  for (const row of shown) {
+    const tr = document.createElement("tr");
+    for (const col of COLS) {
+      const td = document.createElement("td");
+      td.className = col;
+      td.contentEditable = db ? "plaintext-only" : "false";
+      const value = String(row[col] || "");
+      if (col === "sentence" || col === "example") {
+        td.innerHTML = highlight(row.word, value);
+        td.addEventListener("focus", () => { td.textContent = value; });
+      } else {
+        td.textContent = value;
+      }
+      td.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); td.blur(); } });
+      td.addEventListener("blur", async () => {
+        const next = td.innerText.trim();
+        if (next !== value) {
+          try { await db.collection("words").doc(row.id).update({ [col]: next }); }
+          catch { setStatus("Không lưu được thay đổi. Hãy thử lại.", true); }
+        }
+        setTimeout(() => { if (renderPending || col === "sentence" || col === "example") render(); });
+      });
+      tr.appendChild(td);
+    }
+    const tdDel = document.createElement("td");
+    if (db) {
+      const del = document.createElement("button");
+      del.className = "del"; del.textContent = "Xóa"; del.type = "button";
+      let timer;
+      del.onclick = async () => {
+        if (!del.classList.contains("armed")) {          // first click asks, second click deletes
+          del.classList.add("armed"); del.textContent = "Xóa thật?";
+          timer = setTimeout(() => { del.classList.remove("armed"); del.textContent = "Xóa"; }, 3000);
+          return;
+        }
+        clearTimeout(timer);
+        try { await db.collection("words").doc(row.id).delete(); }
+        catch { setStatus("Không xóa được. Hãy thử lại.", true); }
+      };
+      tdDel.appendChild(del);
+    }
+    tr.appendChild(tdDel);
+    tbody.appendChild(tr);
+  }
+  $("count").textContent = loaded ? `${words.length} từ` : "";
+  const empty = $("empty");
+  empty.hidden = loaded && shown.length > 0;
+  if (loaded) empty.textContent = words.length ? "Không có từ nào khớp với tìm kiếm." : "Chưa có từ nào. Hãy nhập một từ và một câu ở phía trên rồi bấm Thêm.";
+}
+
+// ---------- auto-fill with Claude ----------
+function buildPrompt(word, sentence) {
+  return `You are an English-Vietnamese dictionary for a Vietnamese learner of English.
+Word: ${word}
+Sentence: ${sentence || "(none)"}
+
+Work out the ONE sense the word has in this sentence and describe only that sense. Never list other meanings of the word. If no sentence is given, use the most common sense.
+
+Reply with only a JSON object with exactly these string fields:
+- "phonetic": IPA of the word in a General American accent only, never British, e.g. "/bæŋk/". Use American features: pronounce every r ("car" /kɑːr/, "water" /ˈwɑːtər/), the American vowels ("hot" /hɑːt/, "go" /ɡoʊ/, "dance" /dæns/), and the flap t written as /t̬/ where Americans use it ("better" /ˈbet̬ər/)
+- "pos": part of speech in this sentence, written in Vietnamese (danh từ, động từ, tính từ, trạng từ, giới từ, cụm động từ, thành ngữ...)
+- "meaning_vi": short, natural Vietnamese meaning of this sense only
+- "meaning_en": short English learner's-dictionary definition of this sense only
+- "collocations": 3-5 common English collocations for this sense, separated by "; "
+- "synonyms": up to 4 English synonyms for this sense, separated by ", " (empty string if none)
+- "example": one new, simple English sentence using the word in the same sense
+
+Example: {"phonetic":"/bæŋk/","pos":"danh từ","meaning_vi":"bờ (sông, hồ)","meaning_en":"the land along the side of a river or lake","collocations":"river bank; on the bank; steep bank","synonyms":"shore, edge","example":"We had a picnic on the bank of the lake."}`;
+}
+
+$("add").addEventListener("submit", async e => {
+  e.preventDefault();
+  const word = $("word").value.trim();
+  const sentence = $("sentence").value.trim();
+  if (!word) return;
+  if (!db) { setStatus("Hãy đăng nhập claude.ai để lưu từ vựng.", true); return; }
+  if (!sample) { setStatus("Không dùng được Claude ở đây, nên không tự điền được.", true); return; }
+  const btn = $("addBtn");
+  btn.disabled = true; btn.textContent = "Đang tra…";
+  setStatus(`Đang tra nghĩa của “${word}” trong câu của bạn…`);
+  try {
+    const info = await sample.json(buildPrompt(word, sentence), { effort: "low" });
+    const row = { word, sentence, notes: "", createdAt: Date.now() };
+    for (const k of AUTO) row[k] = typeof info?.[k] === "string" ? info[k].trim() : "";
+    await db.collection("words").add(row);
+    $("add").reset();
+    $("word").focus();
+    setStatus(`Đã thêm “${word}”.`);
+  } catch (err) {
+    // the inputs are kept so you can try again
+    setStatus(err?.code === "quota_exceeded" ? "Sổ đã đầy. Hãy xóa bớt từ cũ." : errorText(err), true);
+  } finally {
+    btn.disabled = false; btn.textContent = "Thêm";
+  }
+});
+
+$("search").addEventListener("input", render);
+
+// ---------- start ----------
+render();
+(async () => {
+  const use = name => window.claude?.use ? window.claude.use(name) : Promise.resolve(null);
+  [db, sample] = await Promise.all([use("db"), use("sample")]);
+  if (!db) {
+    loaded = true; render();
+    $("empty").textContent = "Hãy đăng nhập claude.ai để xem và lưu sổ từ vựng.";
+    return;
+  }
+  const slow = setTimeout(() => setStatus("Chưa tải được dữ liệu. Hãy kiểm tra kết nối mạng.", true), 10000);
+  db.collection("words").orderBy("createdAt", "desc").onSnapshot(snap => {
+    words = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!snap.metadata.fromCache) { clearTimeout(slow); if ($("status").textContent.startsWith("Chưa tải")) setStatus(""); }
+    loaded = true;
+    render();
+  }, () => {
+    clearTimeout(slow);
+    loaded = true; render();
+    setStatus("Không tải được sổ từ vựng. Hãy tải lại trang.", true);
+  });
+})();
+</script>

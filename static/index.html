@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sổ từ vựng</title>
+<style>
+  :root { --bg:#f7f7f5; --card:#fff; --text:#222; --muted:#777; --line:#e2e2de; --accent:#2f6fde; --hl:#fff3b0; --err:#c62828; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#18191b; --card:#222326; --text:#e8e8e8; --muted:#999; --line:#36383c; --accent:#6b9bff; --hl:#5a4d10; --err:#ff7b7b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px 16px; background:var(--bg); color:var(--text); font:15px/1.45 system-ui, sans-serif; }
+  h1 { margin:0 0 16px; font-size:22px; }
+  form { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  input { padding:9px 11px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--text); font:inherit; }
+  #word { width:180px; } #sentence { flex:1; min-width:240px; }
+  button { padding:9px 16px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  #error { color:var(--err); min-height:20px; margin-bottom:6px; font-size:14px; }
+  .bar { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; color:var(--muted); font-size:13px; }
+  #search { width:220px; padding:6px 10px; }
+  .wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:10px; }
+  table { border-collapse:collapse; width:100%; min-width:1400px; }
+  th, td { border-bottom:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); background:var(--card); white-space:nowrap; }
+  td[contenteditable] { outline:none; white-space:pre-wrap; }
+  td[contenteditable]:focus { box-shadow: inset 0 0 0 2px var(--accent); border-radius:4px; }
+  td.word { font-weight:600; }
+  td.meaning_vi { font-weight:500; min-width:160px; }
+  td.meaning_en, td.sentence, td.example { min-width:220px; }
+  td.collocations { min-width:200px; }
+  mark { background:var(--hl); color:inherit; border-radius:3px; padding:0 2px; }
+  .del { background:none; color:var(--muted); padding:2px 6px; font-size:16px; }
+  .del:hover { color:var(--err); }
+  .empty { padding:30px; text-align:center; color:var(--muted); }
+</style>
+</head>
+<body>
+<h1>Sổ từ vựng</h1>
+
+<form id="add">
+  <input id="word" placeholder="Từ mới" required autocomplete="off">
+  <input id="sentence" placeholder="Câu có chứa từ đó" autocomplete="off">
+  <button id="addBtn">Thêm</button>
+</form>
+<div id="error"></div>
+
+<div class="bar">
+  <span>Bấm vào ô bất kỳ để sửa. Thay đổi được lưu tự động.</span>
+  <input id="search" placeholder="Tìm kiếm…">
+</div>
+
+<div class="wrap">
+  <table>
+    <thead><tr>
+      <th>Từ</th><th>Phiên âm</th><th>Từ loại</th><th>Nghĩa tiếng Việt</th><th>Nghĩa tiếng Anh</th>
+      <th>Câu của bạn</th><th>Cụm từ thường gặp</th><th>Từ đồng nghĩa</th><th>Ví dụ khác</th><th>Ghi chú</th><th></th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="empty" class="empty">Chưa có từ nào. Hãy thêm từ đầu tiên ở phía trên.</div>
+</div>
+
+<script>
+const COLS = ["word", "phonetic", "pos", "meaning_vi", "meaning_en", "sentence",
+              "collocations", "synonyms", "example", "notes"];
+let words = [];
+
+async function api(path, method = "GET", body) {
+  const r = await fetch(path, { method, headers: { "Content-Type": "application/json" },
+                                body: body && JSON.stringify(body) });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || "Có lỗi xảy ra.");
+  return data;
+}
+
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+// Highlight the word inside the sentences (only while not editing)
+function highlight(row, text) {
+  if (!row.word) return esc(text);
+  const re = new RegExp("\\b(" + row.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\w*)", "gi");
+  return esc(text).replace(re, "<mark>$1</mark>");
+}
+
+function render() {
+  const q = document.getElementById("search").value.toLowerCase();
+  const shown = words.filter(w => !q || COLS.some(c => (w[c] || "").toLowerCase().includes(q)));
+  const tbody = document.getElementById("rows");
+  tbody.innerHTML = "";
+  for (const row of shown) {
+    const tr = document.createElement("tr");
+    for (const col of COLS) {
+      const td = document.createElement("td");
+      td.className = col;
+      td.contentEditable = "plaintext-only";
+      if (col === "sentence" || col === "example") {
+        td.innerHTML = highlight(row, row[col] || "");
+        td.onfocus = () => { td.textContent = row[col] || ""; };
+      } else {
+        td.textContent = row[col] || "";
+      }
+      td.onblur = async () => {
+        const value = td.innerText.trim();
+        if (value !== (row[col] || "")) {
+          row[col] = value;
+          await api("/api/words/" + row.id, "PUT", { [col]: value });
+        }
+        if (["word", "sentence", "example"].includes(col)) render();
+      };
+      td.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); td.blur(); } };
+      tr.appendChild(td);
+    }
+    const tdDel = document.createElement("td");
+    const del = document.createElement("button");
+    del.className = "del"; del.textContent = "✕"; del.title = "Xóa";
+    del.onclick = async () => {
+      if (!confirm(`Xóa từ "${row.word}"?`)) return;
+      await api("/api/words/" + row.id, "DELETE");
+      words = words.filter(w => w.id !== row.id);
+      render();
+    };
+    tdDel.appendChild(del);
+    tr.appendChild(tdDel);
+    tbody.appendChild(tr);
+  }
+  document.getElementById("empty").style.display = words.length ? "none" : "block";
+}
+
+document.getElementById("add").onsubmit = async e => {
+  e.preventDefault();
+  const btn = document.getElementById("addBtn");
+  const errorBox = document.getElementById("error");
+  const word = document.getElementById("word").value.trim();
+  const sentence = document.getElementById("sentence").value.trim();
+  if (!word) return;
+  btn.disabled = true; btn.textContent = "Đang tra…"; errorBox.textContent = "";
+  try {
+    words.unshift(await api("/api/words", "POST", { word, sentence }));
+    e.target.reset();
+    document.getElementById("word").focus();
+    render();
+  } catch (err) {
+    errorBox.textContent = err.message;   // inputs are kept so you can try again
+  } finally {
+    btn.disabled = false; btn.textContent = "Thêm";
+  }
+};
+
+document.getElementById("search").oninput = render;
+
+api("/api/words").then(data => { words = data; render(); });
+</script>
+</body>
+</html>
